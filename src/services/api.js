@@ -1,45 +1,49 @@
+//
+
 class API {
-    post(path, body = null, config = null) {
-        return this.exec("post", path, body, config);
+  BACKEND_URL = import.meta.env.VITE_APP_BACKEND_URL
+
+  post(path, body = null, config = null) {
+    return this.exec('post', path, body, config)
+  }
+
+  get(path, config = null) {
+    return this.exec('get', path, null, config)
+  }
+
+  exec(method, path, body = null, config = {}) {
+    const headers = {}
+    // Check upload type
+    if (body && typeof body == 'object' && !(body instanceof FormData)) {
+      body = JSON.stringify(body)
+      headers['Content-Type'] = 'application/json'
     }
 
-    get(path, config = null) {
-        return this.exec("get", path, null, config);
-    }
+    // Execute fetch
+    return fetch(`${this.BACKEND_URL}/${path}`, {
+      body,
+      method,
+      ...config,
+      headers,
+    }).then(async (res) => {
+      if (res.status >= 400) {
+        let payload = { message: await res.text() }
+        try {
+          payload = JSON.parse(payload.message)
+        } catch (e) {}
 
-    exec(method, path, body = null, config = {}) {
-        const headers = {};
-        // Check upload type
-        if (body && typeof body == "object" && !(body instanceof FormData)) {
-            body = JSON.stringify(body);
-            headers["Content-Type"] = "application/json";
-        }
+        throw { status: res.status, statusText: res.statusText, ...payload }
+      }
 
-        // Execute fetch
-        return fetch(`/api/${path}`, {
-            body,
-            method,
-            ...config,
-            headers
-        }).then(async res => {
-            if (res.status >= 400) {
-                let payload = { message: await res.text() };
-                try {
-                    payload = JSON.parse(payload.message);
-                } catch (e) { }
-
-                throw { status: res.status, statusText: res.statusText, ...payload };
-            }
-
-            // Parse json
-            const text = await res.text();
-            try {
-                return JSON.parse(text);
-            } catch (err) {
-                return text;
-            }
-        });
-    }
+      // Parse json
+      const text = await res.text()
+      try {
+        return JSON.parse(text)
+      } catch (err) {
+        return text
+      }
+    })
+  }
 }
 
-export default new API();
+export default new API()
